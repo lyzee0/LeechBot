@@ -1,73 +1,111 @@
 # =============================================================================
 # LeechBot - Dockerfile
 # =============================================================================
-# Multi-stage build for minimal image size
-# Supports: x86_64, ARM64 (Oracle Cloud, Raspberry Pi, Apple Silicon)
+# Multi-platform:
+#   - linux/amd64
+#   - linux/arm64
+#
+# Python:
+#   - 3.12
+#
+# Build:
+#   docker buildx build --platform linux/amd64,linux/arm64 .
 # =============================================================================
 
-FROM python:3.12-slim AS base
+FROM python:3.12-slim-bookworm
 
 LABEL maintainer="Shinei Nouzen <https://github.com/Shineii86>" \
       description="Advanced Telegram File Transloader" \
       version="3.1.47"
 
-# Prevent Python from buffering output
+# =============================================================================
+# Environment
+# =============================================================================
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies in a single layer
-# - ffmpeg: video/audio processing
-# - aria2: HTTP/FTP/Bittorrent downloader
-# - p7zip-full, unrar, unzip: archive handling
-# - python3-libtorrent: magnet/torrent downloads (DHT, resume, progress)
-# - curl: health checks
-# - tini: proper PID 1 signal handling (SIGTERM → graceful shutdown)
+# =============================================================================
+# System dependencies
+# =============================================================================
+#
+# IMPORTANT:
+# Do NOT install python3-libtorrent here.
+#
+# Debian Bookworm's python3-libtorrent package targets Python 3.11 and is
+# incompatible with the Python 3.12 interpreter in this image.
+#
+# libtorrent is installed from PyPI in requirements.txt. Current libtorrent
+# releases provide CPython 3.12 wheels for both AMD64 and ARM64.
+# =============================================================================
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
         aria2 \
         p7zip-full \
-        unrar \
+        unrar-free \
         unzip \
-        python3-libtorrent \
+        megatools \
         curl \
+        ca-certificates \
         tini \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install megatools — try apt first, fall back to source build
-RUN apt-get update && apt-get install -y --no-install-recommends megatools \
-    && apt-get clean && rm -rf /var/lib/apt/lists/* \
-    || (curl -fsSL https://github.com/megous/megatools/releases/download/1.11.1/megatools-1.11.1.tar.gz | tar xz \
-        && cd megatools-1.11.1 && ./configure && make && make install && cd .. \
-        && rm -rf megatools-1.11.1)
+# =============================================================================
+# Application
+# =============================================================================
 
-# Create app directory
 WORKDIR /app
 
-# Copy requirements first (Docker layer caching — deps change less than code)
+# Copy requirements first for maximum Docker layer caching.
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Install Python dependencies.
+RUN python -m pip install --upgrade pip && \
+    python -m pip install --no-cache-dir -r requirements.txt
+
+# Copy application source.
 COPY . .
 
-# Create runtime directories (sessions, downloads, etc. mounted as volumes)
-RUN mkdir -p sessions downloads temp work thumbnails logs
+# =============================================================================
+# Runtime directories
+# =============================================================================
 
-# Default port for web dashboard
+RUN mkdir -p \
+        sessions \
+        downloads \
+        temp \
+        work \
+        thumbnails \
+        logs
+
+# =============================================================================
+# Port
+# =============================================================================
+
 EXPOSE 8080
 
-# Health check — lightweight HTTP probe, no auth required
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:8080/api/health || exit 1
+# =============================================================================
+# Health check
+# =============================================================================
 
-# Use tini as PID 1 — forwards signals properly so the bot shuts down cleanly
-# Without tini, Python runs as PID 1 and doesn't receive SIGTERM from `docker stop`
+HEALTHCHECK \
+    --interval=30s \
+    --timeout=10s \
+    --start-period=20s \
+    --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8080/api/health || exit 1
+
+# =============================================================================
+# Runtime
+# =============================================================================
+
+# tini becomes PID 1 and forwards SIGTERM/SIGINT correctly.
 ENTRYPOINT ["tini", "--"]
 
-# Run the bot
-CMD ["python3", "-m", "leechbot"]
+CMD ["python", "-m", "leechbot"]
