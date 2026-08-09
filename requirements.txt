@@ -1,110 +1,52 @@
 # =============================================================================
 # LeechBot - Advanced Telegram File Transloader
 # =============================================================================
-# Project   : LeechBot
-# Developer : Shinei Nouzen
-# GitHub    : https://github.com/Shineii86
-# Telegram  : https://telegram.me/Shineii86
-# =============================================================================
 
-
-# =============================================================================
 # Core framework
-# =============================================================================
-
 kurigram>=2.2.24
 tgcrypto>=1.2.5
 
-
-# =============================================================================
 # Configuration
-# =============================================================================
-
 python-dotenv>=1.2.2
 
-
-# =============================================================================
 # RSS parsing
-# =============================================================================
-
 feedparser>=6.0.12
 
-
-# =============================================================================
 # Downloaders
-# =============================================================================
-
 yt-dlp>=2026.7.4
 curl_cffi>=0.16.0
 bgutil-ytdlp-pot-provider>=1.3.1
 gallery-dl>=1.32.8
 aiohttp>=3.14.3
 
-
-# =============================================================================
 # Google Drive
-# =============================================================================
-# Optional Google Drive integration.
-
 google-api-python-client>=2.198.0
 google-auth-httplib2>=0.4.0
 google-auth-oauthlib>=1.4.0
 
-
-# =============================================================================
 # Video processing
-# =============================================================================
-
 moviepy>=2.2.1
 
-
-# =============================================================================
 # Image processing
-# =============================================================================
-
 Pillow>=9.2.0,<12.0
 
-
-# =============================================================================
 # System monitoring & utilities
-# =============================================================================
-
 psutil>=7.2.2
 GPUtil>=1.4.0
 natsort>=8.4.0
 pytz>=2026.2
 
-
 # =============================================================================
 # Torrent / Magnet downloads
 # =============================================================================
 #
-# IMPORTANT:
-# Do NOT use Debian's python3-libtorrent package with Python 3.12.
+# OPTIONAL.
 #
-# libtorrent 2.0.13 provides CPython 3.12 wheels for:
-#   - AMD64 / x86_64
-#   - ARM64 / aarch64
+# Do not install Debian's python3-libtorrent package with Python 3.12.
+# The application should gracefully disable torrent support when the module
+# isn't available.
 #
-# This allows the same requirements.txt to work on both architectures.
-# =============================================================================
-
-libtorrent==2.0.13
-
-
-# =============================================================================
-# System dependencies
-# =============================================================================
-#
-# Installed by Dockerfile / operating system, NOT pip:
-#
-#   ffmpeg       - video/audio processing
-#   aria2        - HTTP/FTP/Bittorrent downloader
-#   p7zip-full   - 7z/archive handling
-#   unrar-free   - RAR archive extraction
-#   unzip        - ZIP archive extraction
-#   megatools    - Mega.nz downloads
-#   curl         - health checks / HTTP utilities
-#   tini         - PID 1 / signal handling
+# If libtorrent is required for your deployment, install it separately after
+# confirming the wheel exists for the target architecture.
 #
 # =============================================================================
