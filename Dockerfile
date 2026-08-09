@@ -1,15 +1,9 @@
 # =============================================================================
 # LeechBot - Dockerfile
 # =============================================================================
-# Multi-platform:
-#   - linux/amd64
-#   - linux/arm64
-#
-# Python:
-#   - 3.12
-#
-# Build:
-#   docker buildx build --platform linux/amd64,linux/arm64 .
+# Platforms:
+#   linux/amd64
+#   linux/arm64
 # =============================================================================
 
 FROM python:3.12-slim-bookworm
@@ -17,10 +11,6 @@ FROM python:3.12-slim-bookworm
 LABEL maintainer="Shinei Nouzen <https://github.com/Shineii86>" \
       description="Advanced Telegram File Transloader" \
       version="3.1.47"
-
-# =============================================================================
-# Environment
-# =============================================================================
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -30,16 +20,6 @@ ENV PYTHONUNBUFFERED=1 \
 
 # =============================================================================
 # System dependencies
-# =============================================================================
-#
-# IMPORTANT:
-# Do NOT install python3-libtorrent here.
-#
-# Debian Bookworm's python3-libtorrent package targets Python 3.11 and is
-# incompatible with the Python 3.12 interpreter in this image.
-#
-# libtorrent is installed from PyPI in requirements.txt. Current libtorrent
-# releases provide CPython 3.12 wheels for both AMD64 and ARM64.
 # =============================================================================
 
 RUN apt-get update && \
@@ -62,31 +42,23 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Copy requirements first for maximum Docker layer caching.
 COPY requirements.txt .
 
 # Install Python dependencies.
-RUN python -m pip install --upgrade pip && \
-    python -m pip install --no-cache-dir -r requirements.txt
+# Do not upgrade pip unnecessarily; use the pip bundled with the
+# Python 3.12 base image.
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
-# Copy application source.
 COPY . .
 
-# =============================================================================
 # Runtime directories
-# =============================================================================
-
 RUN mkdir -p \
-        sessions \
-        downloads \
-        temp \
-        work \
-        thumbnails \
-        logs
-
-# =============================================================================
-# Port
-# =============================================================================
+    sessions \
+    downloads \
+    temp \
+    work \
+    thumbnails \
+    logs
 
 EXPOSE 8080
 
@@ -105,7 +77,6 @@ HEALTHCHECK \
 # Runtime
 # =============================================================================
 
-# tini becomes PID 1 and forwards SIGTERM/SIGINT correctly.
 ENTRYPOINT ["tini", "--"]
 
 CMD ["python", "-m", "leechbot"]
